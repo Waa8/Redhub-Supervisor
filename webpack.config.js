@@ -5,10 +5,10 @@ module.exports = (env, argv) => {
   const isProduction = argv.mode === 'production';
   
   return {
-    entry: './src/client/index.js',
+    entry: process.env.NETLIFY ? './src/client/index-netlify.js' : './src/client/index.js',
     
     output: {
-      path: path.resolve(__dirname, 'public'),
+      path: path.resolve(__dirname, process.env.NETLIFY ? 'dist' : 'public'),
       filename: isProduction ? '[name].[contenthash].js' : '[name].js',
       chunkFilename: isProduction ? '[name].[contenthash].chunk.js' : '[name].chunk.js',
       publicPath: '/',
@@ -49,7 +49,7 @@ module.exports = (env, argv) => {
                 }]
               ],
               plugins: [
-                '@babel/plugin-proposal-class-properties',
+                '@babel/plugin-transform-class-properties',
                 '@babel/plugin-syntax-dynamic-import'
               ]
             }
@@ -92,7 +92,7 @@ module.exports = (env, argv) => {
     
     plugins: [
       new HtmlWebpackPlugin({
-        template: './public/index.html',
+        template: './public/index-template.html',
         filename: 'index.html',
         inject: true,
         minify: isProduction ? {
@@ -103,7 +103,7 @@ module.exports = (env, argv) => {
           removeEmptyAttributes: true,
           removeStyleLinkTypeAttributes: true,
           keepClosingSlash: true,
-          minifyJS: true,
+          minifyJS: false, // Disable JS minification in HTML
           minifyCSS: true,
           minifyURLs: true
         } : false
@@ -133,11 +133,23 @@ module.exports = (env, argv) => {
     },
     
     devServer: {
-      contentBase: path.join(__dirname, 'public'),
+      static: {
+        directory: path.join(__dirname, process.env.NETLIFY ? 'dist' : 'public'),
+      },
       historyApiFallback: true,
       hot: true,
       port: 3000,
-      proxy: {
+      proxy: process.env.NETLIFY ? {
+        '/api': {
+          target: 'http://localhost:8888/.netlify/functions',
+          changeOrigin: true,
+          secure: false,
+          pathRewrite: {
+            '^/api/auth': '/auth',
+            '^/api': '/api'
+          }
+        }
+      } : {
         '/api': {
           target: 'http://localhost:5000',
           changeOrigin: true,
@@ -149,9 +161,11 @@ module.exports = (env, argv) => {
           ws: true
         }
       },
-      overlay: {
-        warnings: false,
-        errors: true
+      client: {
+        overlay: {
+          warnings: false,
+          errors: true
+        }
       }
     },
     
