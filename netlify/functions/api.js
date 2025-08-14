@@ -1,11 +1,14 @@
 const jwt = require('jsonwebtoken');
-const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// Initialize Supabase client only if environment variables are available
+let supabase = null;
+if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+  const { createClient } = require('@supabase/supabase-js');
+  supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  );
+}
 
 // Helper function to validate JWT token
 const validateToken = (token) => {
@@ -155,9 +158,9 @@ exports.handler = async (event, context) => {
           success: true,
           message: 'API service is healthy',
           services: {
-            database: process.env.SUPABASE_URL ? 'connected' : 'not configured',
-            ai: process.env.DEEPSEEK_API_KEY ? 'connected' : 'not configured',
-            mapping: process.env.MAPBOX_ACCESS_TOKEN ? 'connected' : 'not configured'
+            database: supabase ? 'connected' : 'demo mode',
+            ai: process.env.DEEPSEEK_API_KEY ? 'connected' : 'demo mode',
+            mapping: process.env.MAPBOX_ACCESS_TOKEN ? 'connected' : 'demo mode'
           },
           timestamp: new Date().toISOString()
         })
